@@ -1,9 +1,8 @@
 #%%
 from impurities import gini,entropy
 class RegTree:
-    def __init__(self,criterion = "gini"):
-        print("Hello RegTree!")
-        self.node = self.NODE()
+    def __init__(self,criterion = "gini",max_depth=1):
+        self.max_depth=max_depth
         if criterion=="gini":
             self.impurity= gini
         elif criterion=="entropy":
@@ -11,85 +10,95 @@ class RegTree:
         else:
             raise ValueError("Criterion can either be 'gini' or 'entropy'")
 
-    def test_split(self,targets,feature,split):
+    def test_split(self,feature,targets,split):
         n_data = len(targets) #Number of data points
-        idx_greater = [p[0] for p in np.argwhere(feature>=split)] #idx for greater split
-        idx_lower = list(set(range(len(targets)))-set(idx_greater)) #idx for lower split
+        idx_greater = [p[0] for p in np.argwhere(feature>=split)] #index for greater split
+        idx_lower = list(set(range(len(targets)))-set(idx_greater)) #index for lower split
         imp_greater = self.impurity(targets[idx_greater]) #impurity for greater
         imp_lower = self.impurity(targets[idx_lower]) #impurity lower
-        return (idx_greater,idx_lower,len(idx_greater)/n_data*imp_greater+len(idx_lower)/n_data*imp_lower)
-            
-    def get_split(self,node):
-        #Returns the feature/split which maximizes gain
-        targets= node.targets
-        data = node.data
-        feature=0 #feature idx
-        split=0.0
-        low_imp =np.inf
-        idx_greater=0
-        idx_lower=0
-        for i,f in enumerate(data): #for each feature calculate the midpoint
-            splits = (f[1:]+f[:-1])/2 #midpoint for each split
-            for s in splits:
-                idx_g,idx_l,imp = self.test_split(targets=targets,feature=f,split=s)
-                if imp<low_imp: #new best split
-                    split = s #Best plit
-                    feature=i #new feature index
-                    idx_greater=idx_g
-                    idx_lower=idx_l
-                    low_imp=imp
-        return (idx_greater,idx_lower,feature,split)
+        impur = len(idx_greater)/n_data*imp_greater+len(idx_lower)/n_data*imp_lower #Weighted impurity
+        return impur
+    
+    
+    def get_split(self,X,y):
+        """ For all columns, find the best splitting point in the best column
+        """
+
+        BEST_IMPUR = 10.0
+        BEST_COL=0
+        for i,feature in enumerate(X.T): #For all features      
+            possible_splits = np.unique(feature) #Look at all possible splits
+            for split in possible_splits:
+                impur = self.test_split(X,y,split)
+                if impur<BEST_IMPUR: #And save the best
+
+                    BEST_IMPUR=impur
+                    BEST_SPLIT=split
+                    BEST_COL = i
+        return(BEST_COL,BEST_SPLIT)
+    
+    
+
+    def fit(self,X,y,par_node={},depth=0):
+        if par_node is None: #Terminated at last tree
+
+            return None
+        elif len(y)==0: #No data in this node
+
+            return None
+        elif len(np.unique(y))==1: #Only one class in the node; return that
+
+            return ({"val":y[0]})
+        elif depth>=self.max_depth:
+
+            return None
+        else: #Split Tree
+            col,split=self.get_split(X,y)
+            idx_left = (X[:,col]<split) #index for greater split
+            idx_right = (X[:,col]>=split)
+                        
+            par_node={"col":col,"split":split,"class":int(np.round(np.mean(y)))}
+            par_node["left"]=self.fit(X[idx_left,:],y[idx_left],{},depth+1)
+            par_node["right"]=self.fit(X[idx_right,:],y[idx_right],{},depth+1)
+
+            self.trees = par_node
+            return (par_node)
+    
+    
+    def __get_prediction__(self,row):
+        "Prediction of an instance"
+
+        tree = self.trees
+        while tree.get("split"): #If not leaf node
+            if row[tree.get("col")]<tree.get("split"):
+                tree = tree.get("left")
+            else:
+                tree=tree.get("right")
+        else:
+
+            return (tree.get("class")) #Leaf-node = return class
+    def predict(self,X):
+        """
+        function for predicting 
+        """
+        results = np.array([self.__get_prediction__(row) for row in X])
+        return results
         
-
-         
-    def run(self,node):        
-        #Splits the node in children nodes untill pure nodes
-        pure_nodes = (len(np.unique(node.targets))==1)
-        while not pure_nodes: #not pure node
-            idx_greater,idx_lower,_,_=self.get_split(node)
-            node.greater(self.NODE(data=node.data[idx_greater],targets=node.targets[idx_greater]))
-            node.lower(self.NODE(data=node.data[idx_lower],targets=node.targets[idx_lower]))
-        self.run(node.greater)
-        self.run(node.lower)           
-
-
-        
-
-    class NODE:
-        def __init__(self,greater=[],lower=[],data=[],targets=[]):
-            self.data = data
-            self.lower = lower
-            self.greater = greater
-            self.targets=targets
-
-
 #%%
 from sklearn.datasets import load_breast_cancer as load_data
 import numpy as np
 
 DATA = load_data()
-X= DATA.data
-y = DATA.target
+X_train= DATA.data[:-10]
+y_train = DATA.target[:-10]
 
-regtree=RegTree(criterion="gini")
-
-node = regtree.NODE(data=np.array([[20,30,40,50],[1,0,0,1]]),targets=np.array([1,1,0,0]))
-regtree.run(node)
+X_val = DATA.data[-10:]
+y_val = DATA.target[-10:]
 
 
-node = regtree.NODE()
+regtree=RegTree(criterion="gini",max_depth=10)
+regtree.fit(X_train,y_train)
+pred = regtree.predict(X_val)
+print(np.sum((y_val==pred)/len(y_val)))
 
-node.data=X.transpose()
-
-for f in node.data:
-            temp = pd.DataFrame({"f":f,"t":targets})
-            temp.sort("t",d)
-            split_points = [] 
-
-        return (feature,split)
-
-
-
-
-regtree = RegTree()
-regtree.__private_test()n
+#%%
