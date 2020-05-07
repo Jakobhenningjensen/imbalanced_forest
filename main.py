@@ -22,7 +22,7 @@ class RegTree:
         yi = targets[:-1]
         yi1= targets[1:]
         idx=np.argwhere((yi1-yi)!=0)
-        return idx.flatten()+1
+        return idx.flatten()
 
     
 
@@ -80,7 +80,7 @@ class RegTree:
             par_node["right"]=self.fit(X[idx_right,:],y[idx_right],{},depth+1)
 
             self.tree = par_node
-            return (par_node)
+            return par_node
     
     
     def __get_prediction__(self,row):
@@ -104,3 +104,5 @@ class RegTree:
         results = np.array([self.__get_prediction__(row) for row in X])
         return results
 
+if __name__=="__main__":
+    RegTree()
