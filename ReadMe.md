@@ -1,1 +1,1 @@
-A Random Forest to be used on imbalanced data set
+A project to create a Random Forest which is optimized on imbalanced data set
