@@ -12,6 +12,20 @@ class RegTree:
         else:
             raise ValueError("Criterion can either be 'gini' or 'entropy'")
 
+
+
+    def possible_splits(self,targets):
+        """
+        Returns an index array for values to consider.
+        Only consider cases where y[i]!=y[i+1]
+        """
+        yi = targets[:-1]
+        yi1= targets[1:]
+        idx=np.argwhere((yi1-yi)!=0)
+        return idx.flatten()+1
+
+    
+
     def test_split(self,X,targets,split):
         n_data = len(targets) #Number of data points
         idx_greater = [p[0] for p in np.argwhere(X>=split)] #index for greater split
@@ -25,12 +39,13 @@ class RegTree:
     def get_split(self,X,y):
         """ For all columns, find the best splitting point in the best column
         """
-
         BEST_IMPUR = 10.0
         BEST_COL=0
         BEST_SPLIT =0
         for i,feature in enumerate(X.T): #For all features      
-            possible_splits = np.unique(feature) #Look at all possible splits
+
+            possible_splits = self.possible_splits(feature) #Look at all possible splits
+            possible_splits=feature[possible_splits]
             for split in possible_splits:
                 impur = self.test_split(feature,y,split)
                 if impur<BEST_IMPUR: #And save the best
@@ -82,15 +97,10 @@ class RegTree:
               
         else:
             return (tree.get("class")) #Leaf-node = return class
-    
     def predict(self,X):
         """
         function for predicting 
         """
         results = np.array([self.__get_prediction__(row) for row in X])
         return results
-
-
-#%%
-
 
