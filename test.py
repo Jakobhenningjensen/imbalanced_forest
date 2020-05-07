@@ -27,7 +27,7 @@ class TestPred(unittest.TestCase):
         pred_true = true_tree.predict(X_test)
 
         pred_true==pred_pred
-        self.assertEqual(sum(pred_pred!=pred_true),0, "Not same predictions!")
+        self.assertEqual(sum(pred_pred!=pred_true),0, "Not same predictions as sklearn!")
 
 
 if __name__=="__main__":
