@@ -92,49 +92,5 @@ class RegTree:
 
 
 #%%
-from sklearn.datasets import make_classification as mc
-import matplotlib.pyplot as plt
-
-X,y = mc(n_samples=100,n_features=2,class_sep=5.0,n_redundant=0)
-X_lower_left = (X[:,0]<0) & (X[:,1]<0)
-
-y[X_lower_left]=1-y[X_lower_left]
-
-plt.scatter([p[0] for p in X],[p[1] for p in X],c=y)
-
-regtree=RegTree(criterion="gini",max_depth=10)
-regtree.fit(X,y)
-pred = regtree.predict(X)
-print(sum(y==pred)/len(y))
-
-
-
-
-
-
-
-
-#%%
-"""
-from sklearn.datasets import load_breast_cancer as load_data
-from sklearn.model_selection import train_test_split
-
-import numpy as np
-
-
-
-DATA = load_data()
-X= DATA.data
-X=X[:,:2]
-X_train, X_test, y_train, y_test = train_test_split(X,DATA.target, test_size=0.33, random_state=42)
-
-regtree=RegTree(criterion="gini",max_depth=1000)
-regtree.fit(X_train,y_train)
-pred = regtree.predict(X_test)
-print(np.sum((y_test==pred)/len(y_test)))
-
-"""
-
-#%%
 
 
