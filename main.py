@@ -12,6 +12,20 @@ class RegTree:
         else:
             raise ValueError("Criterion can either be 'gini' or 'entropy'")
 
+
+
+    def possible_splits(self,targets):
+        """
+        Returns an index array for values to consider.
+        Only consider cases where y[i]!=y[i+1]
+        """
+        yi = targets[:-1]
+        yi1= targets[1:]
+        idx=np.argwhere((yi1-yi)!=0)
+        return idx.flatten()+1
+
+    
+
     def test_split(self,X,targets,split):
         n_data = len(targets) #Number of data points
         idx_greater = [p[0] for p in np.argwhere(X>=split)] #index for greater split
@@ -29,8 +43,9 @@ class RegTree:
         BEST_COL=0
         BEST_SPLIT =0
         for i,feature in enumerate(X.T): #For all features      
-            #FixMe: optimize the search of possible splits
-            possible_splits = np.unique(feature) #Look at all possible splits
+
+            possible_splits = self.possible_splits(feature) #Look at all possible splits
+            possible_splits=feature[possible_splits]
             for split in possible_splits:
                 impur = self.test_split(feature,y,split)
                 if impur<BEST_IMPUR: #And save the best
@@ -82,7 +97,6 @@ class RegTree:
               
         else:
             return (tree.get("class")) #Leaf-node = return class
-    
     def predict(self,X):
         """
         function for predicting 
@@ -112,17 +126,22 @@ print(sum(y==pred)/len(y))
 
 from sklearn.datasets import load_breast_cancer as load_data
 from sklearn.model_selection import train_test_split
+import time
 
 
 DATA = load_data()
 X= DATA.data
 y=DATA.target
-X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
 
-regtree=RegTree(criterion="gini",max_depth=1)
+t = time.time()
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
+regtree=RegTree(criterion="gini",max_depth=10)
 regtree.fit(X_train,y_train)
+print(time.time()-t)
+
+
 pred = regtree.predict(X_test)
-print(np.sum((y_test==pred)/len(y_test)))
+print(sum((y_test==pred)/len(y_test)))
 
 
 
