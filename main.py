@@ -25,11 +25,11 @@ class RegTree:
     def get_split(self,X,y):
         """ For all columns, find the best splitting point in the best column
         """
-
         BEST_IMPUR = 10.0
         BEST_COL=0
         BEST_SPLIT =0
         for i,feature in enumerate(X.T): #For all features      
+            #FixMe: optimize the search of possible splits
             possible_splits = np.unique(feature) #Look at all possible splits
             for split in possible_splits:
                 impur = self.test_split(feature,y,split)
@@ -108,32 +108,23 @@ pred = regtree.predict(X)
 print(sum(y==pred)/len(y))
 
 
-
-
-
-
-
-
 #%%
-"""
+
 from sklearn.datasets import load_breast_cancer as load_data
 from sklearn.model_selection import train_test_split
-
-import numpy as np
-
 
 
 DATA = load_data()
 X= DATA.data
-X=X[:,:2]
-X_train, X_test, y_train, y_test = train_test_split(X,DATA.target, test_size=0.33, random_state=42)
+y=DATA.target
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
 
-regtree=RegTree(criterion="gini",max_depth=1000)
+regtree=RegTree(criterion="gini",max_depth=1)
 regtree.fit(X_train,y_train)
 pred = regtree.predict(X_test)
 print(np.sum((y_test==pred)/len(y_test)))
 
-"""
+
 
 #%%
 
