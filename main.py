@@ -22,39 +22,61 @@ class RegTree:
         yi = targets[:-1]
         yi1= targets[1:]
         idx=np.argwhere((yi1-yi)!=0)
-        return idx.flatten()
+        return idx.flatten()+1
 
     
+    """
+    def test_split(self,X,y,splits):
+        n_data = len(y) #Number of data points
+        splits=X[splits,:]
 
-    def test_split(self,X,targets,split):
-        n_data = len(targets) #Number of data points
-        idx_greater = [p[0] for p in np.argwhere(X>=split)] #index for greater split
-        idx_lower = list(set(range(len(targets)))-set(idx_greater)) #index for lower split
-        imp_greater = self.impurity(targets[idx_greater]) #impurity for greater
-        imp_lower = self.impurity(targets[idx_lower]) #impurity lower
+        idx_greater = (X>=splits[:,None]) #index for greater split
+        idx_lower = (X<splits[:,None]) #index for lower split
+
+        imp_greater =[self.impurity(y[idx]) for idx in idx_greater]  #impurity for greater
+        imp_lower = [self.impurity(y[idx]) for idx in idx_lower] #impurity lower
+
         impur = len(idx_greater)/n_data*imp_greater+len(idx_lower)/n_data*imp_lower #Weighted impurity
         return impur
+        """
     
     
     def get_split(self,X,y):
-        """ For all columns, find the best splitting point in the best column
+        """ For all features, find the best splitting point in the best feature
+        
+        Returns:
+            impur: (n_feature,2):
+                Matrix consisting of the (index, split_value)
         """
-        BEST_IMPUR = 10.0
-        BEST_COL=0
-        BEST_SPLIT =0
-        for i,feature in enumerate(X.T): #For all features      
+        n_data = len(y) #Number of data points
+        splits = self.possible_splits(y) #Get the splitting index's
+        
+        splits = X[splits,:] #Getting splitting values
+        split_list=splits
+        
+        splits = splits[:,None]
 
-            possible_splits = self.possible_splits(feature) #Look at all possible splits
-            possible_splits=feature[possible_splits]
-            for split in possible_splits:
-                impur = self.test_split(feature,y,split)
-                if impur<BEST_IMPUR: #And save the best
+        #For each feature, calculate the greater/lower points for each splitting criteria
+        
+        #idx_* output shape (i,j,k): X[i]>=split(j) (feature k)
+        #i.e each row, i, corresponds to X[i]>split[:]   (for feature k)
+        idx_greater = X>=splits 
+        idx_lower = X<splits 
+        impur = np.zeros(shape=(X.shape[1],2))
+        for i in range(X.shape[1]):
+            idx_low = idx_lower[...,i]
+            idx_great = idx_greater[...,i]
+            
+            imp_greater = [self.impurity(y[p]) for p in idx_great]
+            imp_lower = [self.impurity(y[p]) for p in idx_low]
 
-                    BEST_IMPUR=impur
-                    BEST_SPLIT=split
-                    BEST_COL = i
-        return(BEST_COL,BEST_SPLIT)
-    
+            weighted_imp= np.array([sum(y[p_great])/n_data*imp_greater[j]+sum(y[p_low])/n_data*imp_lower[j] for j,(p_great,p_low) in enumerate(zip(idx_great,idx_low))])
+            split_idx = np.argmin(weighted_imp) #Get the split index with the lowest impurity for the current feature
+            impur[i]=(split_idx,split_list[split_idx,i])
+
+        col = np.argmin(impur,axis=0)[0] 
+        split= impur[col,1]
+        return col,split  
     
 
     def fit(self,X,y,par_node={},depth=0):
@@ -106,3 +128,48 @@ class RegTree:
 
 if __name__=="__main__":
     RegTree()
+
+
+    
+#%%
+"""
+from sklearn.datasets import make_classification as mc
+import matplotlib.pyplot as plt
+
+
+X,y = mc(n_samples=100,n_features=2,class_sep=5.0,n_redundant=0)
+X_lower_left = (X[:,0]<0) & (X[:,1]<0)
+
+y[X_lower_left]=1-y[X_lower_left]
+
+plt.scatter([p[0] for p in X],[p[1] for p in X],c=y)
+
+regtree=RegTree(criterion="gini",max_depth=10)
+regtree.fit(X,y)
+pred = regtree.predict(X)
+y==pred)/len(y)) 
+"""
+
+#%%
+from sklearn.tree import DecisionTreeClassifier as DCT
+from sklearn import tree 
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_breast_cancer as load_data
+DATA = load_data() #Loads test data
+X= DATA.data
+y=DATA.target
+X_train, X_test, y_train, _ = train_test_split(X,y, test_size=0.2, random_state=42)
+
+regtree=RegTree(criterion="gini",max_depth=3)
+regtree.fit(X_train,y_train)
+col,split = regtree.get_split(X_train,y_train)
+pred_pred = regtree.predict(X_test)
+
+true_tree = DCT(min_impurity_split=0,max_depth=3) #Sklearn 
+true_tree.fit(X_train,y_train)
+pred_true = true_tree.predict(X_test)
+tree.plot_tree(true_tree,class_names=True)
+
+sum(pred_true!=pred_pred)
+
+#%%
