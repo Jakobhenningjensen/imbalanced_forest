@@ -14,47 +14,66 @@ class RegTree:
 
 
 
-    def possible_splits(self,targets):
+    def possible_splits(self,feature,y):
         """
         Returns an index array for values to consider.
-        Only consider cases where y[i]!=y[i+1]
+        Only consider cases where y[i]!=y[i+1] when sorted according to the given feature
         """
-        yi = targets[:-1]
-        yi1= targets[1:]
+
+        yi = y[:-1]
+        yi1= y[1:]
         idx=np.argwhere((yi1-yi)!=0)
         return idx.flatten()
 
     
 
-    def test_split(self,X,targets,split):
-        n_data = len(targets) #Number of data points
-        idx_greater = [p[0] for p in np.argwhere(X>=split)] #index for greater split
-        idx_lower = list(set(range(len(targets)))-set(idx_greater)) #index for lower split
-        imp_greater = self.impurity(targets[idx_greater]) #impurity for greater
-        imp_lower = self.impurity(targets[idx_lower]) #impurity lower
-        impur = len(idx_greater)/n_data*imp_greater+len(idx_lower)/n_data*imp_lower #Weighted impurity
-        return impur
+    def test_split(self,X,y,splits):
+        """
+        Calculates the gain for each splitting point in splits
+
+        """
+        n_data = len(y) #Number of data points
+        splits=(X[splits]+X[splits+1])/2
+
+        idx_greater = (X>splits[:,None]) #index for greater split
+        idx_lower = (X<splits[:,None]) #index for lower split
+
+        imp_greater =[self.impurity(y[idx]) for idx in idx_greater]  #impurity for greater
+        imp_lower = [self.impurity(y[idx]) for idx in idx_lower] #impurity lower
+
+        impur = [sum(idx_great)/n_data*imp_great+sum(idx_low)/n_data*imp_low for idx_great,imp_great,idx_low,imp_low in zip(idx_greater,imp_greater,idx_lower,imp_lower)] #Weighted impurity
+        return (impur,splits)
+
     
     
     def get_split(self,X,y):
-        """ For all columns, find the best splitting point in the best column
         """
-        BEST_IMPUR = 10.0
-        BEST_COL=0
+         For all features, find the best splitting point in the best feature
+        
+        """
+            
+        BEST_COL = 0
         BEST_SPLIT =0
-        for i,feature in enumerate(X.T): #For all features      
+        BEST_IMPUR = 99
+        for i,feature in enumerate(X.T):
+            arg_sort=np.argsort(feature) #Sort the feature for optimizing the find of splitting points
+            feature= feature[arg_sort]
+            y_sort = y[arg_sort]
+            splits = self.possible_splits(feature,y_sort)  #Get    
 
-            possible_splits = self.possible_splits(feature) #Look at all possible splits
-            possible_splits=feature[possible_splits]
-            for split in possible_splits:
-                impur = self.test_split(feature,y,split)
-                if impur<BEST_IMPUR: #And save the best
+            impur,splits = self.test_split(feature,y_sort,splits) #Get impurity for splitting points
+            best_idx = np.argmin(impur)
+            best_impur = impur[best_idx]
+            
+            if best_impur==0.0: #Found perfect split, terminate
+                return(i,splits[best_idx])
+            elif best_impur<BEST_IMPUR:
+                BEST_IMPUR=best_impur
+                BEST_SPLIT=splits[best_idx]
+                BEST_COL=i
+        return (BEST_COL,BEST_SPLIT)
 
-                    BEST_IMPUR=impur
-                    BEST_SPLIT=split
-                    BEST_COL = i
-        return(BEST_COL,BEST_SPLIT)
-    
+
     
 
     def fit(self,X,y,par_node={},depth=0):
