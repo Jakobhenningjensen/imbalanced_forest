@@ -29,7 +29,7 @@ class RegTree:
 
     def test_split(self,X,y,splits):
         """
-        Calculates the gain for each splitting point in splits
+        Calculates the weighted impurity for each splitting point in splits
 
         """
         n_data = len(y) #Number of data points
@@ -78,16 +78,13 @@ class RegTree:
 
     def fit(self,X,y,par_node={},depth=0):
 
-        if len(y)==0: #No data in this node
-
-            return None
-        elif len(np.unique(y))==1: #Only one class in the node; return that
+        if len(np.unique(y))==1: #Only one class in the node; return that
             
                 return ({"class":y[0]})
-        elif depth>=self.max_depth: #Reached max-depth
+        elif depth>=self.max_depth: #Reached max-depths
 
             return {"class":int(np.round(np.mean(y)))}
-        else: #Split Tree
+        else: #Split Tree 
             col,split=self.get_split(X,y)
             idx_left = (X[:,col]<split) #index for lower split
             idx_right = (X[:,col]>=split) #index for lower split
@@ -95,10 +92,10 @@ class RegTree:
             par_node={"col":col,#Col=index,
             "split":split, #Splitting value
             "class":int(np.round(np.mean(y)))} #Class 
-            par_node["left"]=self.fit(X[idx_left,:],y[idx_left],{},depth+1)
-            par_node["right"]=self.fit(X[idx_right,:],y[idx_right],{},depth+1)
+            par_node["left"]=self.fit(X[idx_left,:],y[idx_left],{},depth+1) #Fit left tree
+            par_node["right"]=self.fit(X[idx_right,:],y[idx_right],{},depth+1) #Fit right tree
 
-            self.tree = par_node
+            self.tree = par_node #Save the tree
             return par_node
     
     
